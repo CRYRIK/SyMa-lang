@@ -6,7 +6,9 @@ import sys
 from collections import deque
 import readline # Optional: for REPL history and editing
 import re
-import platform # Для определения ОС (пока не используется для getch)
+import random as rand
+import keyboard
+import readchar
 
 # --- Вспомогательные функции (is_float, is_int - без изменений) ---
 # ... (is_float, is_int) ...
@@ -28,6 +30,7 @@ def is_int(s):
 class SyMaInterpreter:
     def __init__(self):
         self.stack = deque()
+        # Добавлены текстовые алиасы констант
         self.variables = {
             'π': math.pi, '𝑒': math.e, '𝑖': 1j, '∞': float('inf'), '⊤': True, '⊥': False,
             'pi': math.pi, 'tau': 2 * math.pi, 'e': math.e, 'j': 1j,
@@ -67,6 +70,7 @@ class SyMaInterpreter:
             # *** НОВЫЕ ОПЕРАЦИИ ТЕРМИНАЛА ***
             '⚑': self.op_gotoxy, # Символ для gotoxy (флажок)
             '□': self.op_cls,    # Символ для cls (очистить экран)
+            '🔁': self.repeat, '↑': self.op_get, '↓':self.op_set, '⚄': self.op_random, '💤':self.op_sleep, '△': self.op_readchar, '📥': self.op_append
          }
         self.operations.update(symbol_ops)
         aliases = {
@@ -83,7 +87,7 @@ class SyMaInterpreter:
             'shape': '📐', 'range': '↕', 'if': '?', 'while': 'λ', 'concat': '⌢',
              # *** НОВЫЕ АЛИАСЫ ***
             'gotoxy': '⚑',
-            'cls': '□', 'clear_screen': '□',
+            'cls': '□', 'clear_screen': '□', 'repeat': '🔁', 'random': "⚄", 'sleep': "💤", 'get': "↑", 'set': "↓", 'readchar': "△", 'append': "📥"
         }
         for alias, symbol in aliases.items():
             if symbol in self.operations: self.operations[alias] = self.operations[symbol]
@@ -281,13 +285,22 @@ class SyMaInterpreter:
             if i == max_iter: print(f"[Warning] Max iterations ({max_iter}) reached for 'λ'", file=sys.stderr); break
         if is_debug_on: print(f"DEBUG Exit WHILE loop.")
     def op_concat(self): self._check_stack_depth(2, '⌢'); b,a = self.pop(),self.pop(); self.push(str(a) + str(b))
+    def repeat(self): # uwu
+        self._check_stack_depth(2, "🔁")
+        ex = self.pop()
+        n = self.pop()
+        if not (isinstance(ex,str) and ex.startswith('{') and ex.endswith('}')):
+            raise TypeError("repeat: second argument must be a '{ ... }' string.")
+        for _ in range(int(n)):
+            self.push(ex)
+            self.op_execute()
 
     # *** НОВЫЕ ОПЕРАЦИИ ***
     def op_gotoxy(self):
         """Moves cursor to (X, Y). Stack: Y X ->"""
         self._check_stack_depth(2, '⚑/gotoxy')
-        x = self.pop() # Column (from right)
         y = self.pop() # Row (from right)
+        x = self.pop() # Column (from right)
         try:
             row = int(y) + 1 # ANSI is 1-based
             col = int(x) + 1
@@ -302,6 +315,52 @@ class SyMaInterpreter:
         # \033[2J clears entire screen
         # \033[H moves cursor to home position (1,1)
         print("\033[2J\033[H", end='', flush=True)
+        
+    def op_get(self):
+        self._check_stack_depth(2, "get ↑")
+        i = self.pop()
+        arr = self.pop()
+        self.push(arr)
+        if is_int(i):
+            self.push(arr[i])
+        else:
+            self.push(arr[tuple(i)])
+
+    def op_set(self): 
+        self._check_stack_depth(3, "set ↓")
+        i = self.pop()
+        value = self.pop()
+        arr = self.pop()
+        if is_int(i):
+            if isinstance(arr, str):
+                str_arr = list(arr)
+                if len(str(value)) > 1: 
+                    raise ValueError("set (↓): attemting to `set` a string when the value is not a char")
+                str_arr[i] = str(value)
+                arr = ''.join(str_arr)
+            else:
+                arr[i] = value
+        else:
+            arr[tuple(i)] = value
+        self.push(arr)
+
+    def op_append(self):
+        self._check_stack_depth(2, "append 📥")
+        value = self.pop()
+        arr = self.pop()
+        if isinstance(arr, str):
+            raise ValueError("append (📥): given array is a string. use concat ⌢  instead.")
+        self.push(np.append(arr, value))
+
+
+    def op_random(self): 
+        self.push(rand.random())
+
+    def op_sleep(self): 
+        time.sleep(float(self.pop()))
+
+    def op_readchar(self): 
+        self.push(readchar.readchar())
 
     # --- Метод парсинга _parse_token (С ИСПРАВЛЕННЫМ ПОРЯДКОМ) ---
     def _parse_token(self, current_line, current_col):
