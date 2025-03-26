@@ -1,5 +1,5 @@
 # SyMa-lang
-the first programming language written using a neural network (Gemini 2.5), including syma.py and README.md 
+programming language written using a neural network (GEMINI 2.5)
 
 
 # SyMa Language Reference (v0.8)
