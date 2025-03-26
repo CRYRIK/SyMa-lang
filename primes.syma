@@ -1,3 +1,5 @@
+// "primes" by G-5
+
 1 "x" store 
 { 
   x 1 - "n" store
