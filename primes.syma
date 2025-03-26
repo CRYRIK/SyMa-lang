@@ -1,0 +1,16 @@
+1 "x" store 
+{ 
+  x 1 - "n" store
+  False "divcheck" store 
+  { n 1 > }{ 
+    x n mod 0 = divcheck or "divcheck" store
+    n 1 - "n" store 
+  } while 
+} "checknum" store 
+{ x 1500 < }{ 
+  x 1 + "x" store 
+  checknum 
+  divcheck {}{ 
+    x println 
+  } ? 
+} while
