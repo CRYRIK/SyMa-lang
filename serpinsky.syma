@@ -1,0 +1,49 @@
+// sierpinski.syma (v3 - removed drop inside if)
+// Генерация треугольника Серпинского (текстовая версия)
+
+// --- Определение функции isInside ---
+{
+    "currentX" store
+    "currentY" store
+    True "isInResult" store
+
+    { currentY 0 > currentX 0 > and }
+    {
+        currentX 2 % 1 eq
+        currentY 2 % 1 eq
+        and
+        { // Если оба нечетные
+             // drop                     // <<< УБРАНО
+             False "isInResult" store
+             0 "currentX" store       // Принудительный выход
+        } if
+
+        currentX 0 > {
+            currentX 2 div floor "currentX" store
+            currentY 2 div floor "currentY" store
+        } if
+    } λ
+
+    isInResult
+} "isInside" store
+
+// --- Основной цикл отрисовки ---
+32 "N" store
+"*" "fillChar" store
+" " "emptyChar" store
+0 "y" store
+{ y N < }
+{
+    0 "x" store
+    { x N < }
+    {
+        y x isInside
+        { fillChar } { emptyChar } ?
+        prints
+        x 1 + "x" store
+    } λ
+    "" println
+    y 1 + "y" store
+} λ
+clear
+"Done." println
